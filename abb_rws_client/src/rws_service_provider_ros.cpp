@@ -45,10 +45,20 @@
 #include <abb_rws_client/mapping.hpp>
 #include <abb_hardware_interface/utilities.hpp>
 
+#include <tf2_ros/static_transform_broadcaster.h>
+#include <geometry_msgs/msg/transform_stamped.hpp>
+#include <type_traits>
+#include <sstream>
+#include <vector>
+#include <algorithm>
+#include <cctype>
+
 using RAPIDSymbols = abb::rws::RWSStateMachineInterface::ResourceIdentifiers::RAPID::Symbols;
 
 namespace abb_rws_client
 {
+// Static member definition
+std::shared_ptr<tf2_ros::StaticTransformBroadcaster> RWSServiceProviderROS::tf_broadcaster_;
 RWSServiceProviderROS::RWSServiceProviderROS(const rclcpp::Node::SharedPtr& node, const std::string& robot_ip,
                                              unsigned short robot_port)
   : node_(node)
@@ -60,6 +70,10 @@ RWSServiceProviderROS::RWSServiceProviderROS(const rclcpp::Node::SharedPtr& node
   robot_controller_description_ =
       abb::robot::utilities::establishRWSConnection(rws_manager_, robot_id, no_connection_timeout);
   abb::robot::utilities::verifyRobotWareVersion(robot_controller_description_.header().robot_ware_version());
+
+  tf_broadcaster_ = std::make_shared<tf2_ros::StaticTransformBroadcaster>(node_);
+
+  // Static member definition
 
   system_state_sub_ = node_->create_subscription<abb_robot_msgs::msg::SystemState>(
       "~/system_states", 10, std::bind(&RWSServiceProviderROS::systemStateCallback, this, std::placeholders::_1));
@@ -99,6 +113,10 @@ RWSServiceProviderROS::RWSServiceProviderROS(const rclcpp::Node::SharedPtr& node
   core_services_.push_back(node_->create_service<abb_robot_msgs::srv::SetFileContents>(
       "~/set_file_contents",
       std::bind(&RWSServiceProviderROS::setFileContents, this, std::placeholders::_1, std::placeholders::_2)));
+  // Register the new GetRAPIDWobj service
+  core_services_.push_back(node_->create_service<abb_robot_msgs::srv::GetRAPIDWobj>(
+      "~/get_wobjdata_tf",
+      std::bind(&RWSServiceProviderROS::getWObjDataTF, this, std::placeholders::_1, std::placeholders::_2)));
   core_services_.push_back(node_->create_service<abb_robot_msgs::srv::SetIOSignal>(
       "~/set_io_signal",
       std::bind(&RWSServiceProviderROS::setIOSignal, this, std::placeholders::_1, std::placeholders::_2)));
@@ -1286,6 +1304,197 @@ bool RWSServiceProviderROS::stopEGMStream(const abb_robot_msgs::srv::TriggerWith
 
   return true;
 }
+bool RWSServiceProviderROS::getWObjDataTF(
+    const abb_robot_msgs::srv::GetRAPIDWobj::Request::SharedPtr req,
+    abb_robot_msgs::srv::GetRAPIDWobj::Response::SharedPtr res)
+{
+    if (!verifyRWSManagerReady(res->result_code, res->message))
+    {
+        return true;
+    }
+
+    bool found = false;
+    geometry_msgs::msg::TransformStamped tf_msg;
+
+    // Helpers
+    auto trim = [](const std::string& s) {
+        size_t a = 0, b = s.size();
+        while (a < b && std::isspace(static_cast<unsigned char>(s[a]))) ++a;
+        while (b > a && std::isspace(static_cast<unsigned char>(s[b - 1]))) --b;
+        return s.substr(a, b - a);
+    };
+
+    auto stripQuotes = [](const std::string& s) {
+        if (s.size() >= 2 && ((s.front() == '"' && s.back() == '"') || (s.front() == '\'' && s.back() == '\'')))
+            return s.substr(1, s.size() - 2);
+        return s;
+    };
+
+    auto parseNumberArray = [&](const std::string& token) {
+        std::vector<double> nums;
+        std::string s = trim(token);
+        if (!s.empty() && s.front() == '[' && s.back() == ']') s = s.substr(1, s.size() - 2);
+        std::stringstream ss(s);
+        std::string item;
+        while (std::getline(ss, item, ','))
+        {
+            try { nums.push_back(std::stod(trim(item))); }
+            catch (...) {}
+        }
+        return nums;
+    };
+
+    auto toBoolToken = [&](const std::string& tok) {
+        std::string t = stripQuotes(trim(tok));
+        std::transform(t.begin(), t.end(), t.begin(), [](unsigned char c){ return std::toupper(c); });
+        return (t == "TRUE" || t == "1");
+    };
+
+    rws_manager_.runService([&](abb::rws::RWSStateMachineInterface& interface) {
+        std::string raw = interface.getRAPIDSymbolData(req->path.task, req->path.module, req->path.symbol);
+        RCLCPP_DEBUG_STREAM(node_->get_logger(), "Raw RAPID response: " << raw);
+
+        std::string s = trim(raw);
+        if (s.empty())
+        {
+            res->message = "Failed to get WObjData";
+            res->result_code = abb_robot_msgs::msg::ServiceResponses::RC_FAILED;
+            return;
+        }
+
+        // Split top-level elements: uf, cf, name, user frame, tool frame
+        std::vector<std::string> elems;
+        int depth = 0;
+        bool in_string = false;
+        std::string cur;
+        for (char c : s)
+        {
+            cur.push_back(c);
+            if (c == '"') in_string = !in_string;
+            else if (!in_string)
+            {
+                if (c == '[') ++depth;
+                else if (c == ']') --depth;
+                else if (c == ',' && depth == 1)
+                {
+                    cur.pop_back();
+                    elems.push_back(trim(cur));
+                    cur.clear();
+                }
+            }
+        }
+        if (!cur.empty()) elems.push_back(trim(cur));
+
+        if (elems.size() < 5)
+        {
+            res->message = "Unexpected WObjData format";
+            res->result_code = abb_robot_msgs::msg::ServiceResponses::RC_FAILED;
+            RCLCPP_DEBUG_STREAM(node_->get_logger(), "WObjData parse failed: " << raw);
+            return;
+        }
+
+        try
+        {
+            res->robhold = toBoolToken(elems[0]);
+            res->ufprog = toBoolToken(elems[1]);
+            res->ufmec = stripQuotes(trim(elems[2]));
+
+            auto parseFrame = [&](const std::string& frame_str,
+                                  std::array<double, 3>& pos_out,
+                                  std::array<double, 4>& quat_out,
+                                  bool fill_tf = false)
+            {
+                std::string inner = trim(frame_str);
+                if (inner.front() == '[' && inner.back() == ']') inner = inner.substr(1, inner.size() - 2);
+
+                // find first [ ] for pos
+                size_t pos_start = inner.find('[');
+                size_t pos_end = inner.find(']');
+                size_t quat_start = inner.rfind('[');
+                size_t quat_end = inner.rfind(']');
+
+                auto pos_vec = parseNumberArray(inner.substr(pos_start, pos_end - pos_start + 1));
+                auto quat_vec = parseNumberArray(inner.substr(quat_start, quat_end - quat_start + 1));
+
+                if (pos_vec.size() >= 3)
+                {
+                  // RWS returns positions in millimetres; convert to metres
+                  pos_out[0] = pos_vec[0] / 1000.0;
+                  pos_out[1] = pos_vec[1] / 1000.0;
+                  pos_out[2] = pos_vec[2] / 1000.0;
+                }
+                if (quat_vec.size() >= 4)
+                { // real part first
+                    quat_out[0] = quat_vec[1]; 
+                    quat_out[1] = quat_vec[2];
+                    quat_out[2] = quat_vec[3];
+                    quat_out[3] = quat_vec[0];
+                }
+
+                if (fill_tf)
+                {
+                    tf_msg.transform.translation.x = pos_out[0];
+                    tf_msg.transform.translation.y = pos_out[1];
+                    tf_msg.transform.translation.z = pos_out[2];
+                    tf_msg.transform.rotation.x = quat_out[0];
+                    tf_msg.transform.rotation.y = quat_out[1];
+                    tf_msg.transform.rotation.z = quat_out[2];
+                    tf_msg.transform.rotation.w = quat_out[3];
+                }
+            };
+
+            // Parse user frame
+            parseFrame(elems[3], res->user_frame_position, res->user_frame_orientation, true);
+
+            // Parse tool frame
+            parseFrame(elems[4], res->object_frame_position, res->object_frame_orientation, false);
+
+            // Populate TF
+            tf_msg.header.stamp = node_->now();
+            tf_msg.header.frame_id = "base_link";
+            tf_msg.child_frame_id = res->ufmec.empty() ? req->path.symbol : res->ufmec;
+
+            found = true;
+            res->result_code = abb_robot_msgs::msg::ServiceResponses::RC_SUCCESS;
+            res->message = "Parsed WObjData";
+        }
+        catch (const std::exception& ex)
+        {
+            res->message = std::string("WObjData parse exception: ") + ex.what();
+            res->result_code = abb_robot_msgs::msg::ServiceResponses::RC_FAILED;
+            RCLCPP_DEBUG_STREAM(node_->get_logger(), "WObjData parse exception: " << ex.what());
+        }
+    });
+
+    if (found)
+    {
+      // also publish object frame as child of the user frame
+      geometry_msgs::msg::TransformStamped obj_tf;
+      obj_tf.header.stamp = tf_msg.header.stamp;
+      obj_tf.header.frame_id = tf_msg.child_frame_id; // user frame as parent
+      std::string obj_child = tf_msg.child_frame_id + std::string("_object");
+      obj_tf.child_frame_id = obj_child;
+      obj_tf.transform.translation.x = res->object_frame_position[0];
+      obj_tf.transform.translation.y = res->object_frame_position[1];
+      obj_tf.transform.translation.z = res->object_frame_position[2];
+      obj_tf.transform.rotation.x = res->object_frame_orientation[0];
+      obj_tf.transform.rotation.y = res->object_frame_orientation[1];
+      obj_tf.transform.rotation.z = res->object_frame_orientation[2];
+      obj_tf.transform.rotation.w = res->object_frame_orientation[3];
+
+      std::vector<geometry_msgs::msg::TransformStamped> tfs;
+      tfs.push_back(tf_msg);
+      tfs.push_back(obj_tf);
+      tf_broadcaster_->sendTransform(tfs);
+      if (res->result_code != abb_robot_msgs::msg::ServiceResponses::RC_SUCCESS)
+      {
+        res->result_code = abb_robot_msgs::msg::ServiceResponses::RC_SUCCESS;
+      }
+    }
+
+    return true;
+}
+
 
 /*************************************************************************************************************
  **************************************** Verification helper methods ****************************************

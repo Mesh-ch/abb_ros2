@@ -55,6 +55,7 @@
 #include <abb_rapid_sm_addin_msgs/srv/set_egm_settings.hpp>
 #include <abb_rapid_sm_addin_msgs/srv/set_rapid_routine.hpp>
 #include <abb_rapid_sm_addin_msgs/srv/set_sg_command.hpp>
+#include <abb_robot_msgs/srv/get_rapid_wobj.hpp>
 
 #include <abb_robot_msgs/srv/get_file_contents.hpp>
 #include <abb_robot_msgs/srv/get_io_signal.hpp>
@@ -74,6 +75,9 @@
 #include <abb_robot_msgs/srv/set_rapid_symbol.hpp>
 #include <abb_robot_msgs/srv/set_speed_ratio.hpp>
 #include <abb_robot_msgs/srv/trigger_with_result_code.hpp>
+
+#include <tf2_ros/static_transform_broadcaster.h>
+#include <geometry_msgs/msg/transform_stamped.hpp>
 
 namespace abb_rws_client
 {
@@ -501,6 +505,17 @@ private:
    */
   bool stopEGMStream(const abb_robot_msgs::srv::TriggerWithResultCode::Request::SharedPtr req,
                      abb_robot_msgs::srv::TriggerWithResultCode::Response::SharedPtr res);
+            
+    /**
+   * \brief Gets a WObjData RAPID symbol and publishes its user frame as a TF.
+   *
+   * \param req request to process (contains RAPIDSymbolPath).
+   * \param res response for containing the result and WObjData fields.
+   *
+   * \return bool true if the request was processed.
+   */
+bool getWObjDataTF(const abb_robot_msgs::srv::GetRAPIDWobj::Request::SharedPtr req,
+                   abb_robot_msgs::srv::GetRAPIDWobj::Response::SharedPtr res);            
 
   /**
    * \brief Verify that auto mode is active.
@@ -680,6 +695,8 @@ private:
    * \brief The latest known RobotWare StateMachine Add-In runtime state.
    */
   abb_rapid_sm_addin_msgs::msg::RuntimeState runtime_state_;
+
+  static std::shared_ptr<tf2_ros::StaticTransformBroadcaster> tf_broadcaster_;
 };
 
 }  // namespace abb_rws_client

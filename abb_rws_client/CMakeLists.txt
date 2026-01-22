@@ -27,6 +27,7 @@ set(THIS_PACKAGE_INCLUDE_DEPENDS
     abb_hardware_interface
     rclcpp
     sensor_msgs
+    tf2_ros
 )
 
 # find dependencies
