@@ -1,24 +1,24 @@
 # Building the package in ROS 2
 
-Create a ROS 2 workspace per the online tutorial. Clone this package into your workspace's `src` directory.
+This repository is intended to be used as the workspace root and is managed with `pixi` using the internal RoboStack Jazzy ROS 2 environment.
 
-Import package dependencies:
+Prerequisites:
 
-    sudo apt update
-    sudo apt dist-upgrade
-    rosdep update
-    cd src
-    vcs import < abb_ros2/abb.repos
-    rosdep install -r --from-paths . --ignore-src --rosdistro $ROS_DISTRO -y
+- Install `pixi`.
+- Do not source a system ROS installation while working in this repository.
+
+Set up the workspace dependencies:
+
+    pixi install
+    pixi run setup
 
 Build the package:
 
-    cd <COLCON_WORKSPACE>
-    colcon build
+    pixi run build
 
 Quickly verify the build by launching RViz and viewing the robot:
 
-    ros2 launch abb_irb1200_support view_robot.launch.py
+    pixi run bash -lc 'source install/setup.bash && ros2 launch abb_irb1200_support view_robot.launch.py'
 
 # Simulating a robot in ROS 2
 

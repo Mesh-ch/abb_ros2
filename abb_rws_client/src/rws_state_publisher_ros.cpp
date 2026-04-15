@@ -41,7 +41,7 @@
 #include <abb_rws_client/rws_state_publisher_ros.hpp>
 
 #include <abb_rws_client/mapping.hpp>
-#include <abb_hardware_interface/utilities.hpp>
+#include <abb_ros2_utils/utilities.hpp>
 
 namespace
 {

@@ -21,10 +21,10 @@ endif()
 set(THIS_PACKAGE_INCLUDE_DEPENDS
     abb_egm_rws_managers
     abb_egm_msgs
+    abb_ros2_utils
     abb_robot_msgs
     abb_rapid_msgs
     abb_rapid_sm_addin_msgs
-    abb_hardware_interface
     rclcpp
     sensor_msgs
     tf2_ros

@@ -39,7 +39,8 @@
 // https://github.com/ros-industrial/abb_robot_driver/blob/master/abb_robot_cpp_utilities/src/initialization.cpp
 // https://github.com/ros-industrial/abb_robot_driver/blob/master/abb_robot_cpp_utilities/src/verification.cpp
 
-#include <abb_hardware_interface/utilities.hpp>
+#include <abb_ros2_utils/utilities.hpp>
+
 #include <stdexcept>
 
 #include <rclcpp/rclcpp.hpp>
@@ -52,21 +53,10 @@ namespace utilities
 {
 namespace
 {
-/**
- * \brief Max number of attempts when trying to connect to a robot controller via RWS.
- */
 constexpr unsigned int RWS_MAX_CONNECTION_ATTEMPTS{ 5 };
-
-/**
- * \brief Error message for failed connection attempts when trying to connect to a robot controller via RWS.
- */
 constexpr char RWS_CONNECTION_ERROR_MESSAGE[]{ "Failed to establish RWS connection to the robot controller" };
-
-/**
- * \brief Time [s] to wait before trying to reconnect to a robot controller via RWS.
- */
 constexpr uint8_t RWS_RECONNECTION_WAIT_TIME{ 1 };
-auto LOGGER = rclcpp::get_logger("ABBHardwareInterfaceUtilities");
+auto LOGGER = rclcpp::get_logger("ABBRos2Utilities");
 }  // namespace
 
 RobotControllerDescription establishRWSConnection(RWSManager& rws_manager, const std::string& robot_controller_id,

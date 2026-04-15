@@ -1,7 +1,7 @@
 repositories:
   abb_libegm:
     type: git
-    url: https://github.com/ros-industrial/abb_libegm.git
+    url: git@github.com:Mesh-ch/abb_libegm.git
     version: master
   abb_librws:
     type: git
@@ -9,9 +9,9 @@ repositories:
     version: master
   abb_egm_rws_managers:
     type: git
-    url: https://github.com/ros-industrial/abb_egm_rws_managers.git
+    url: git@github.com:Mesh-ch/abb_egm_rws_managers.git
     version: master
   abb_ros2_msgs:
     type: git
-    url: https://github.com/gbartyzel/abb_ros2_msgs.git
+    url: git@github.com:Mesh-ch/abb_ros2_msgs.git
     version: rolling

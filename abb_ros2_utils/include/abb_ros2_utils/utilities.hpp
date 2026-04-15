@@ -44,7 +44,6 @@
 #include <string>
 
 #include <abb_egm_rws_managers/rws_manager.h>
-#include <string>
 
 namespace abb
 {
@@ -52,40 +51,11 @@ namespace robot
 {
 namespace utilities
 {
-/**
- * \brief Attempts to establish a connection to a robot controller's RWS server.
- *
- * If a connection is established, then a structured description of the robot controller is returned.
- *
- * \param rws_manager for handling the RWS communication with the robot controller.
- * \param robot_controller_id for an identifier/nickname for the targeted robot controller.
- * \param no_connection_timeout indicator whether to wait indefinitely on the robot controller.
- *
- * \return RobotControllerDescription of the robot controller.
- *
- * \throw std::runtime_error if unable to establish a connection.
- */
 RobotControllerDescription establishRWSConnection(RWSManager& rws_manager, const std::string& robot_controller_id,
                                                   const bool no_connection_timeout);
 
-/**
- * \brief Verifies that the RobotWare version is supported.
- *
- * Note: For now, only RobotWare versions in the range [6.07.01, 7.0) are supported (i.e. excluding 7.0).
- *
- * \param rw_version to verify.
- *
- * \throw std::runtime_error if the RobotWare version is not supported.
- */
 void verifyRobotWareVersion(const RobotWareVersion& rw_version);
 
-/**
- * \brief Verifies that the RobotWare StateMachine Add-In is present in a system.
- *
- * \param system_indicators to verify.
- *
- * \return bool true if the StateMachine Add-In is present.
- */
 bool verifyStateMachineAddInPresence(const SystemIndicators& system_indicators);
 }  // namespace utilities
 }  // namespace robot

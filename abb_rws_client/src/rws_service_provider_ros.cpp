@@ -43,7 +43,7 @@
 #include <abb_robot_msgs/msg/service_responses.hpp>
 
 #include <abb_rws_client/mapping.hpp>
-#include <abb_hardware_interface/utilities.hpp>
+#include <abb_ros2_utils/utilities.hpp>
 
 #include <tf2_ros/static_transform_broadcaster.h>
 #include <geometry_msgs/msg/transform_stamped.hpp>

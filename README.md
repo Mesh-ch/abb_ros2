@@ -21,22 +21,19 @@ There are three ways to use this package:
 
 Detailed setup instructions can be found [here](docs/README.md).
 
+This repository is managed with `pixi` and uses the internal RoboStack Jazzy ROS 2 environment.
+
+The normal full-stack workflow is:
+
+    pixi install
+    pixi run setup
+    pixi run build
+
+A reduced client-focused environment is also available:
+
+    pixi run -e rws-client setup
+    pixi run -e rws-client build
+
 ## Limitations:
 
 The IRB1200-5-0.9 is the only robot that has robot description and config files as of March 2022. Pull requests to add additional robot types are welcome.
-
-## Contributing
-
-### pre-commit Formatting Checks
-
-This package has a pre-commit check that runs in CI. You can use this locally and set it up to run automatically before you commit something. To install, use pip:
-
-    pip3 install pre-commit
-
-To run over all the files in the repo manually:
-
-    pre-commit run -a
-
-To run pre-commit automatically before committing in a local repo, install git hooks:
-
-    pre-commit install

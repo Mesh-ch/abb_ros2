@@ -1,12 +1,6 @@
 cmake_minimum_required(VERSION 3.5)
-project(abb_hardware_interface)
+project(abb_ros2_utils)
 
-# Default to C99
-if(NOT CMAKE_C_STANDARD)
-  set(CMAKE_C_STANDARD 99)
-endif()
-
-# Default to C++14
 if(NOT CMAKE_CXX_STANDARD)
   set(CMAKE_CXX_STANDARD 14)
 endif()
@@ -19,59 +13,34 @@ if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
 endif()
 
 set(THIS_PACKAGE_INCLUDE_DEPENDS
-    abb_ros2_utils
     abb_egm_rws_managers
-    hardware_interface
-    pluginlib
     rclcpp
-    rclcpp_lifecycle
 )
 
-# find dependencies
 find_package(ament_cmake REQUIRED)
 
 foreach(Dependency IN ITEMS ${THIS_PACKAGE_INCLUDE_DEPENDS})
   find_package(${Dependency} REQUIRED)
 endforeach()
 
-###########
-## Build ##
-###########
-
-add_library(
-  ${PROJECT_NAME}
-  SHARED
-  src/abb_hardware_interface.cpp
+add_library(${PROJECT_NAME} SHARED
+  src/utilities.cpp
 )
 ament_target_dependencies(${PROJECT_NAME} ${THIS_PACKAGE_INCLUDE_DEPENDS})
-target_include_directories(
-  ${PROJECT_NAME}
-  PRIVATE
-  include
-)
-
-pluginlib_export_plugin_description_file(hardware_interface abb_hardware_interface.xml)
-
-#############
-## Install ##
-#############
+target_include_directories(${PROJECT_NAME} PRIVATE include)
 
 install(
   TARGETS ${PROJECT_NAME}
   DESTINATION lib
 )
+
 install(
   DIRECTORY include/
   DESTINATION include
 )
 
-#############
-## Testing ##
-#############
-
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
-  # Disable ament_copyright
   set(ament_cmake_copyright_FOUND TRUE)
   set(ament_cmake_cpplint_FOUND TRUE)
   set(ament_cmake_uncrustify_FOUND TRUE)
