@@ -117,6 +117,9 @@ RWSServiceProviderROS::RWSServiceProviderROS(const rclcpp::Node::SharedPtr& node
   core_services_.push_back(node_->create_service<abb_robot_msgs::srv::GetRAPIDWobj>(
       "~/get_wobjdata_tf",
       std::bind(&RWSServiceProviderROS::getWObjDataTF, this, std::placeholders::_1, std::placeholders::_2)));
+  core_services_.push_back(node_->create_service<abb_robot_msgs::srv::GetRAPIDTool>(
+      "~/get_tooldata_tf",
+      std::bind(&RWSServiceProviderROS::getToolDataTF, this, std::placeholders::_1, std::placeholders::_2)));
   core_services_.push_back(node_->create_service<abb_robot_msgs::srv::SetIOSignal>(
       "~/set_io_signal",
       std::bind(&RWSServiceProviderROS::setIOSignal, this, std::placeholders::_1, std::placeholders::_2)));
@@ -1315,6 +1318,8 @@ bool RWSServiceProviderROS::getWObjDataTF(
 
     bool found = false;
     geometry_msgs::msg::TransformStamped tf_msg;
+    std::string user_frame_id;
+    std::string object_frame_id;
 
     // Helpers
     auto trim = [](const std::string& s) {
@@ -1450,9 +1455,13 @@ bool RWSServiceProviderROS::getWObjDataTF(
             parseFrame(elems[4], res->object_frame_position, res->object_frame_orientation, false);
 
             // Populate TF
-            tf_msg.header.stamp = node_->now();
-            tf_msg.header.frame_id = "base_link";
-            tf_msg.child_frame_id = res->ufmec.empty() ? req->path.symbol : res->ufmec;
+	            tf_msg.header.stamp = node_->now();
+	            tf_msg.header.frame_id = req->parent_frame_id.empty() ? "base_link" : req->parent_frame_id;
+	            user_frame_id = req->user_frame_id.empty() ? (res->ufmec.empty() ? req->path.symbol : res->ufmec)
+	                                                       : req->user_frame_id;
+	            object_frame_id =
+	                req->object_frame_id.empty() ? user_frame_id + std::string("_object") : req->object_frame_id;
+	            tf_msg.child_frame_id = user_frame_id;
 
             found = true;
             res->result_code = abb_robot_msgs::msg::ServiceResponses::RC_SUCCESS;
@@ -1471,9 +1480,8 @@ bool RWSServiceProviderROS::getWObjDataTF(
       // also publish object frame as child of the user frame
       geometry_msgs::msg::TransformStamped obj_tf;
       obj_tf.header.stamp = tf_msg.header.stamp;
-      obj_tf.header.frame_id = tf_msg.child_frame_id; // user frame as parent
-      std::string obj_child = tf_msg.child_frame_id + std::string("_object");
-      obj_tf.child_frame_id = obj_child;
+	      obj_tf.header.frame_id = tf_msg.child_frame_id; // user frame as parent
+	      obj_tf.child_frame_id = object_frame_id;
       obj_tf.transform.translation.x = res->object_frame_position[0];
       obj_tf.transform.translation.y = res->object_frame_position[1];
       obj_tf.transform.translation.z = res->object_frame_position[2];
@@ -1492,7 +1500,69 @@ bool RWSServiceProviderROS::getWObjDataTF(
       }
     }
 
+	    return true;
+}
+
+bool RWSServiceProviderROS::getToolDataTF(
+    const abb_robot_msgs::srv::GetRAPIDTool::Request::SharedPtr req,
+    abb_robot_msgs::srv::GetRAPIDTool::Response::SharedPtr res)
+{
+  if (!verifyRWSManagerReady(res->result_code, res->message))
+  {
     return true;
+  }
+
+  bool found = false;
+  geometry_msgs::msg::TransformStamped tf_msg;
+
+  rws_manager_.runService([&](abb::rws::RWSStateMachineInterface& interface) {
+    abb::rws::ToolData rapid_tool;
+    if (!interface.getRAPIDSymbolData(req->path.task, req->path.module, req->path.symbol, &rapid_tool))
+    {
+      res->message = "Failed to get ToolData";
+      res->result_code = abb_robot_msgs::msg::ServiceResponses::RC_FAILED;
+      return;
+    }
+
+    const auto& pos = rapid_tool.tframe.pos;
+    const auto& rot = rapid_tool.tframe.rot;
+
+    // RAPID tooldata positions are expressed in mm relative to tool0.
+    res->tool_frame_position[0] = pos.x.value / 1000.0;
+    res->tool_frame_position[1] = pos.y.value / 1000.0;
+    res->tool_frame_position[2] = pos.z.value / 1000.0;
+    // RAPID quaternion stores real part first; ROS expects x, y, z, w.
+    res->tool_frame_orientation[0] = rot.q2.value;
+    res->tool_frame_orientation[1] = rot.q3.value;
+    res->tool_frame_orientation[2] = rot.q4.value;
+    res->tool_frame_orientation[3] = rot.q1.value;
+
+    tf_msg.header.stamp = node_->now();
+    tf_msg.header.frame_id = req->parent_frame_id.empty() ? "tool0" : req->parent_frame_id;
+    tf_msg.child_frame_id = req->tool_frame_id.empty() ? req->path.symbol : req->tool_frame_id;
+    tf_msg.transform.translation.x = res->tool_frame_position[0];
+    tf_msg.transform.translation.y = res->tool_frame_position[1];
+    tf_msg.transform.translation.z = res->tool_frame_position[2];
+    tf_msg.transform.rotation.x = res->tool_frame_orientation[0];
+    tf_msg.transform.rotation.y = res->tool_frame_orientation[1];
+    tf_msg.transform.rotation.z = res->tool_frame_orientation[2];
+    tf_msg.transform.rotation.w = res->tool_frame_orientation[3];
+
+    found = true;
+    res->result_code = abb_robot_msgs::msg::ServiceResponses::RC_SUCCESS;
+    res->message = "Parsed ToolData";
+  });
+
+  if (found)
+  {
+    tf_broadcaster_->sendTransform(tf_msg);
+    if (res->result_code != abb_robot_msgs::msg::ServiceResponses::RC_SUCCESS)
+    {
+      res->result_code = abb_robot_msgs::msg::ServiceResponses::RC_SUCCESS;
+    }
+  }
+
+  return true;
 }
 
 

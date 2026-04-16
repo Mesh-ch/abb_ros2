@@ -55,6 +55,7 @@
 #include <abb_rapid_sm_addin_msgs/srv/set_egm_settings.hpp>
 #include <abb_rapid_sm_addin_msgs/srv/set_rapid_routine.hpp>
 #include <abb_rapid_sm_addin_msgs/srv/set_sg_command.hpp>
+#include <abb_robot_msgs/srv/get_rapid_tool.hpp>
 #include <abb_robot_msgs/srv/get_rapid_wobj.hpp>
 
 #include <abb_robot_msgs/srv/get_file_contents.hpp>
@@ -516,6 +517,9 @@ private:
    */
 bool getWObjDataTF(const abb_robot_msgs::srv::GetRAPIDWobj::Request::SharedPtr req,
                    abb_robot_msgs::srv::GetRAPIDWobj::Response::SharedPtr res);            
+
+  bool getToolDataTF(const abb_robot_msgs::srv::GetRAPIDTool::Request::SharedPtr req,
+                     abb_robot_msgs::srv::GetRAPIDTool::Response::SharedPtr res);
 
   /**
    * \brief Verify that auto mode is active.
