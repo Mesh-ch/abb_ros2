@@ -12,6 +12,8 @@ source:
 build:
   number: 0
   script:
+    - mkdir -p $SRC_DIR/src
+    - vcs import --skip-existing $SRC_DIR/src < $SRC_DIR/abb.repos
     - colcon --log-base $SRC_DIR/.pixi-build/log build --merge-install --install-base $PREFIX --build-base $SRC_DIR/.pixi-build/build
 
 requirements:
