@@ -1,0 +1,51 @@
+context:
+  name: abb_ros2
+  version: "0.1.0"
+
+package:
+  name: ${{ name }}
+  version: ${{ version }}
+
+source:
+  path: .
+
+build:
+  number: 0
+  script:
+    - colcon --log-base $SRC_DIR/.pixi-build/log build --merge-install --install-base $PREFIX --build-base $SRC_DIR/.pixi-build/build
+
+requirements:
+  build:
+    - compilers
+    - cmake >=3.8,<4
+    - pkg-config
+    - make
+    - ninja
+    - python 3.12.*
+    - colcon-common-extensions
+    - vcstool
+  host:
+    - poco
+    - ros-jazzy-moveit
+    - ros-jazzy-ros2-control
+    - ros-jazzy-ros2-controllers
+    - ros-jazzy-ros-testing
+    - ros-jazzy-desktop
+    - libgl-devel
+  run:
+    - poco
+    - ros-jazzy-moveit
+    - ros-jazzy-ros2-control
+    - ros-jazzy-ros2-controllers
+    - ros-jazzy-desktop
+
+tests:
+  - script:
+      - test -f $PREFIX/share/abb_ros2/package.xml
+      - test -f $PREFIX/share/abb_hardware_interface/package.xml
+
+about:
+  homepage: https://github.com/Mesh-ch/abb_ros2
+  repository: https://github.com/Mesh-ch/abb_ros2
+  summary: ABB ROS 2 integration workspace with drivers, bringup, messages, and robot configs.
+  license: Apache-2.0 AND BSD-3-Clause
