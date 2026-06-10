@@ -39,3 +39,6 @@ libgl-devel = "*"
 
 [package.build]
 backend = { name = "pixi-build-rattler-build", version = "*", channels = ["https://prefix.dev/conda-forge"] }
+
+[activation]
+scripts = ["install/setup.sh"]

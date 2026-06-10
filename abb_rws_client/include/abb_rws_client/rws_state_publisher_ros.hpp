@@ -64,7 +64,8 @@ public:
    * \param robot_ip IP address for the robot controller's RWS server.
    * \param robot_poty Port number for the robot controller's RWS server.
    */
-  RWSStatePublisherROS(const rclcpp::Node::SharedPtr& node, const std::string& robot_ip, unsigned short robot_port);
+  RWSStatePublisherROS(const rclcpp::Node::SharedPtr& node, const std::string& robot_ip,
+                       unsigned short robot_port, const std::string& rws_version);
 
 private:
   /**

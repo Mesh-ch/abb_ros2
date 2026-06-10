@@ -7,6 +7,7 @@ from launch_ros.actions import Node
 def generate_launch_description():
     robot_ip = LaunchConfiguration("robot_ip")
     robot_port = LaunchConfiguration("robot_port")
+    rws_version = LaunchConfiguration("rws_version")
     robot_nickname = LaunchConfiguration("robot_nickname")
     polling_rate = LaunchConfiguration("polling_rate")
     no_connection_timeout = LaunchConfiguration("no_connection_timeout")
@@ -26,6 +27,14 @@ def generate_launch_description():
             "robot_port",
             default_value="80",
             description="Port number of the robot controller's RWS server",
+        )
+    )
+
+    declared_arguments.append(
+        DeclareLaunchArgument(
+            "rws_version",
+            default_value="rws1",
+            description="Robot Web Services protocol version to target (rws1 or rws2)",
         )
     )
 
@@ -62,6 +71,7 @@ def generate_launch_description():
         parameters=[
             {"robot_ip": robot_ip},
             {"robot_port": robot_port},
+            {"rws_version": rws_version},
             {"robot_nickname": robot_nickname},
             {"polling_rate": polling_rate},
             {"no_connection_timeout": no_connection_timeout},

@@ -89,6 +89,9 @@ CallbackReturn ABBSystemHardware::on_init(const hardware_interface::HardwareInfo
     RCLCPP_INFO_STREAM(LOGGER, "Generating robot controller description from RWS.");
     const auto rws_port = stoi(info_.hardware_parameters["rws_port"]);
     const auto rws_ip = info_.hardware_parameters["rws_ip"];
+    const auto rws_version_it = info_.hardware_parameters.find("rws_version");
+    const auto rws_version =
+        rws_version_it == info_.hardware_parameters.end() ? std::string{"rws1"} : rws_version_it->second;
 
     if (rws_ip == "None")
     {
@@ -97,7 +100,7 @@ CallbackReturn ABBSystemHardware::on_init(const hardware_interface::HardwareInfo
     }
 
     // Get robot controller description from RWS
-    abb::robot::RWSManager rws_manager(rws_ip, rws_port, "Default User", "robotics");
+    abb::robot::RWSManager rws_manager(rws_ip, rws_port, "Default User", "robotics", rws_version);
     robot_controller_description_ = abb::robot::utilities::establishRWSConnection(rws_manager, "IRB1200", true);
   }
   else

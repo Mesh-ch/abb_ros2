@@ -86,6 +86,13 @@ def generate_launch_description():
     )
     declared_arguments.append(
         DeclareLaunchArgument(
+            "rws_version",
+            default_value="rws1",
+            description="Robot Web Services protocol version to target (rws1 or rws2).",
+        )
+    )
+    declared_arguments.append(
+        DeclareLaunchArgument(
             "configure_via_rws",
             default_value="true",
             description="If false, the robot description will be generate from joint information \
@@ -124,6 +131,7 @@ def generate_launch_description():
     fake_sensor_commands = LaunchConfiguration("fake_sensor_commands")
     rws_ip = LaunchConfiguration("rws_ip")
     rws_port = LaunchConfiguration("rws_port")
+    rws_version = LaunchConfiguration("rws_version")
     configure_via_rws = LaunchConfiguration("configure_via_rws")
     initial_joint_controller = LaunchConfiguration("initial_joint_controller")
     launch_rviz = LaunchConfiguration("launch_rviz")
@@ -150,6 +158,9 @@ def generate_launch_description():
             " ",
             "rws_port:=",
             rws_port,
+            " ",
+            "rws_version:=",
+            rws_version,
             " ",
             "configure_via_rws:=",
             configure_via_rws,

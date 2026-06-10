@@ -54,10 +54,10 @@ constexpr double THROTTLE_TIME{ 10.0 };
 namespace abb_rws_client
 {
 RWSStatePublisherROS::RWSStatePublisherROS(const rclcpp::Node::SharedPtr& node, const std::string& robot_ip,
-                                           unsigned short robot_port)
+                                           unsigned short robot_port, const std::string& rws_version)
   : node_(node)
   , rws_manager_{ robot_ip, robot_port, abb::rws::SystemConstants::General::DEFAULT_USERNAME,
-                  abb::rws::SystemConstants::General::DEFAULT_PASSWORD }
+                  abb::rws::SystemConstants::General::DEFAULT_PASSWORD, rws_version }
 {
   node_->declare_parameter("polling_rate", 5.0);
 

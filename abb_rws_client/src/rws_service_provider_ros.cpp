@@ -60,10 +60,10 @@ namespace abb_rws_client
 // Static member definition
 std::shared_ptr<tf2_ros::StaticTransformBroadcaster> RWSServiceProviderROS::tf_broadcaster_;
 RWSServiceProviderROS::RWSServiceProviderROS(const rclcpp::Node::SharedPtr& node, const std::string& robot_ip,
-                                             unsigned short robot_port)
+                                             unsigned short robot_port, const std::string& rws_version)
   : node_(node)
   , rws_manager_{ robot_ip, robot_port, abb::rws::SystemConstants::General::DEFAULT_USERNAME,
-                  abb::rws::SystemConstants::General::DEFAULT_PASSWORD }
+                  abb::rws::SystemConstants::General::DEFAULT_PASSWORD, rws_version }
 {
   std::string robot_id = node_->get_parameter("robot_nickname").as_string();
   bool no_connection_timeout = node_->get_parameter("no_connection_timeout").as_bool();
