@@ -5,7 +5,7 @@ repositories:
     version: master
   abb_librws:
     type: git
-    url: https://github.com/ros-industrial/abb_librws.git
+    url: git@github.com:Mesh-ch/abb_librws.git
     version: master
   abb_egm_rws_managers:
     type: git
